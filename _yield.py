@@ -4,11 +4,12 @@ def test():
         print("dads")
         yield i+1
 
-x=test()
+x=genter()
 for i,c in enumerate(x):
-    print(i,c)
-    if(i==2):
+    #print(i,c)
+    if(i==1):
         break
+    print(c)
 
 def genter():
     a = 4
