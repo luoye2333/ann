@@ -1,0 +1,20 @@
+PM2d5
+空气质量数据集
+这是美国驻北京大使馆记录了五年的数据集
+按小时报告天气和污染水平。
+No,year,month,day,hour,pm2.5,DEWP,TEMP,PRES,cbwd,Iws,Is,Ir
+表格列对应关系
+(A) No:数据的编号
+(B) year:年份(2010~2014)
+(C) month
+(D) day
+(E) hour
+(F) pm2.5:一个表征大小的值，某些为NA，表示缺失
+(G) DEWP:Dew Point ?
+露点（空气中水气含量达到饱和的气温，低于此温度时水气从空气中析出凝成水珠）
+(H) TEMP:temperature
+(I) PRES:Pressure(hPa)
+(J) cbwd:Combined wind direction
+(K) Iws:Cumulated wind speed 累积风速
+(L) Is:Cumulated hours of snow
+(M) Ir:Cumulated hours of rain
