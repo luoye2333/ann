@@ -103,7 +103,7 @@ out_b1=tf.Variable(tf.random_normal([10]))
 prediction=tf.nn.softmax(tf.matmul(fc_out1,out_w1)+out_b1)
 
 #########################################
-loss=-tf.reduce_mean(
+loss= - tf.reduce_mean(
     tf_Y*tf.log(tf.clip_by_value(prediction,1e-11,1.0))
 )
 train_step=tf.train.AdamOptimizer(1e-3).minimize(loss)
@@ -111,14 +111,14 @@ y_pred=tf.arg_max(prediction,1)
 bool_pred=tf.equal(tf.arg_max(tf_Y,1),y_pred)
 accuracy=tf.reduce_mean(tf.cast(bool_pred,tf.float32))
 
+#############################################
 tf.summary.scalar('accuracy',accuracy)
-merged=tf.summary.merge_all()
 
 ##############################################
-epoch_to_train=3
-
+epoch_to_train=1000
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
+    merged=tf.summary.merge_all()
 
     train_writer=tf.summary.FileWriter(
         os.path.dirname(__file__)+"\\summary\\train",sess.graph)
@@ -140,12 +140,12 @@ with tf.Session() as sess:
         #if (epoch%10==0):
         if True:
             summary,acc_train=sess.run([merged,accuracy],feed_dict={tf_X:X[0:1700],tf_Y:Y[0:1700]})
-            test_writer.add_summary(epoch,acc_train)
+            train_writer.add_summary(summary,epoch)
             #res_ypred=y_pred.eval(feed_dict={tf_X:X[1700:1796],tf_Y:Y[1700:1796]}).flatten()
             #print(res_ypred)
             #acc_validate=accuracy_score(Y_data[1700:1796],res_ypred.reshape(-1,1))
             summary,acc_validate=sess.run([merged,accuracy],feed_dict={tf_X:X[1700:1796],tf_Y:Y[1700:1796]})
-            train_writer.add_summary(epoch,acc_validate)
+            test_writer.add_summary(summary,epoch)
             print("{0}  {1:.3f}  {2:.3f}".format(epoch,acc_train,acc_validate))
     
     
@@ -154,3 +154,6 @@ with tf.Session() as sess:
         __file__)+"\\save4\\"+"+"+str(epoch_to_train)+"@"
         +datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
     )
+
+
+#tensorboard --logdir=test:"./test",train:"./train"
