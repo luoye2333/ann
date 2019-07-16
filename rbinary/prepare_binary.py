@@ -8,7 +8,7 @@ path=os.path.dirname(__file__)
 
 len=20
 #含1个数从0~len,每组n个,共(len+1)*n
-sample_num=123
+sample_num=10000
 si=[]
 labels=[]
 

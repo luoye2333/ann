@@ -52,7 +52,7 @@ tf_X=tf.placeholder(tf.float32,[None,8,8,1])
 tf_Y=tf.placeholder(tf.float32,[None,10])#长度不固定
 
 conv_filter_w1=tf.Variable(tf.random_normal([3,3,1,10]))#卷积核
-conv_filter_b1=tf.Variable(tf.random_normal([10]))#biase共用
+conv_filter_b1=tf.Variable(tf.random_normal([10]))#bias共用
 relu_feature_maps1=tf.nn.relu(
     tf.nn.conv2d(tf_X,conv_filter_w1,
     strides=[1,1,1,1],padding="SAME")
@@ -111,7 +111,7 @@ y_pred=tf.arg_max(prediction,1)
 bool_pred=tf.equal(tf.arg_max(tf_Y,1),y_pred)
 accuracy=tf.reduce_mean(tf.cast(bool_pred,tf.float32))
 
-#############################################
+################### summary ##########################
 tf.summary.scalar('accuracy',accuracy)
 
 ##############################################

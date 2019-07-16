@@ -1,5 +1,8 @@
 {
     "python.pythonPath": "Q:\\program_files\\Anaconda\\python.exe",
     "python.linting.pylintEnabled": true,
-    "python.linting.enabled": true
+    "python.linting.enabled": true,
+    "matlab.matlabpath": "Q:\\program_files\\MATLAB\\R2018b\\bin\\matlab.exe",
+    "matlab.mlintpath": "Q:\\program_files\\MATLAB\\R2018b\\bin\\win64\\mlint.exe",
+    "matlab.linterEncoding": "GB 2312"
 }
