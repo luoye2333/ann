@@ -1,109 +1,94 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import tensorflow as tf
- 
-#读取序列数据
-data = pd.read_excel("seq_data.xlsx")
-#取前800个
-data = data.values[1:800]
-#标准化数据
-normalize_data = (data - np.mean(data)) / np.std(data)
-#normalize_data = normalize_data[:, np.newaxis]
-#data=data[:, np.newaxis]
-s= np.std(data)
-m=np.mean(data)
-#序列段长度
-time_step = 96
-#隐藏层节点数目
-rnn_unit = 8
-#cell层数
-lstm_layers = 2
-#序列段批处理数目
-batch_size = 7
-#输入维度
-input_size = 1
-#输出维度
-output_size = 1
-#学习率
-lr = 0.006
-train_x, train_y = [], []
-for i in range(len(data) - time_step - 1):
-    x = normalize_data[i:i + time_step]
-    y =normalize_data[i + 1:i + time_step + 1]
-    train_x.append(x.tolist())
-    train_y.append(y.tolist())
- 
-X = tf.placeholder(tf.float32, [None, time_step, input_size])#shape(?,time_step, input_size)
-Y = tf.placeholder(tf.float32, [None, time_step, output_size])#shape(?,time_step, out_size)
- 
-weights = {
-    'in': tf.Variable(tf.random_normal([input_size, rnn_unit])),
-    'out': tf.Variable(tf.random_normal([rnn_unit, 1]))
-}
-biases = {
-    'in': tf.Variable(tf.constant(0.1, shape=[rnn_unit, ])),
-    'out': tf.Variable(tf.constant(0.1, shape=[1, ]))
-}
- 
- 
+import os
+from sklearn.preprocessing import MinMaxScaler,OneHotEncoder
+import random
+
+path=os.path.dirname(__file__)
+
+data=pd.read_csv(path+"\\bdata.csv",index_col=0)
+#index_col=0去除第一列的行号
+X_data=data.values
+#去除第一行列名称,并转化成nparray
+data=pd.read_csv(path+"\\blabel.csv",index_col=0)
+Y_data=data.values
+#####################################
+sample_num=data.shape[0]
+sample_train=sample_num*4//5
+sample_test=sample_num-sample_train
+
+#标签不需要onehotencoder,因为是累积过程
+#把标签y归一化到0~1
+scaler=MinMaxScaler()
+Y_data=scaler.fit_transform(Y_data)
+
+
+#生成batch
+#注意用到了随机抽取
+batch_size=8
+def generate_batch(_X,_Y,_n,_batch_size):
+    batch_xs=[]
+    batch_ys=[]
+    for _ in range(_batch_size):
+        r=random.randint(0,_n-1)
+        batch_xs=np.append(batch_xs,_X[r],axis=0)
+        batch_ys=np.append(batch_ys,_Y[r],axis=0)
+
+    yield batch_xs,batch_ys
+
+time_step=20
+rnn_unit=8#每层lstm的单元数
+lstm_layer=2
+LearningRate=0.006
+input_size=1
+output_size=1
+
+tf.reset_default_graph()
+X=tf.placeholder(tf.float32,[None,time_step,input_size])
+Y=tf.placeholder(tf.float32,[None,time_step,output_size])
+with tf.name_scope("weight"):
+    w1=tf.Variable(tf.random_normal([input_size,rnn_unit]))
+    w2=tf.Variable(tf.random_normal([rnn_unit,output_size]))
+with tf.name_scope("biases"):
+    b1=tf.Variable(tf.random_normal([rnn_unit,]))
+    b2=tf.Variable(tf.random_normal([output_size,]))
+
 def lstm(batch):
-    w_in = weights['in']
-    b_in = biases['in']
-    input = tf.reshape(X, [-1, input_size])
-    input_rnn = tf.matmul(input, w_in) + b_in
-    input_rnn = tf.reshape(input_rnn, [-1, time_step, rnn_unit])
-    cell = tf.nn.rnn_cell.MultiRNNCell([tf.nn.rnn_cell.BasicLSTMCell(rnn_unit) for i in range(lstm_layers)])
-    init_state = cell.zero_state(batch, dtype=tf.float32)
-    output_rnn, final_states = tf.nn.dynamic_rnn(cell, input_rnn, initial_state=init_state, dtype=tf.float32)
-    output = tf.reshape(output_rnn, [-1, rnn_unit])
-    w_out = weights['out']
-    b_out = biases['out']
-    pred = tf.matmul(output, w_out) + b_out
-    return pred, final_states
- 
+    _input=tf.reshape(X,[-1,input_size])
+    input_rnn=tf.matmul(_input,w1)+b1
+    input_rnn=tf.reshape(input_rnn,[-1,time_step,rnn_unit])
+    cell=tf.nn.rnn_cell.MultiRNNCell(
+        tf.nn.rnn_cell.BasicLSTMCell(rnn_unit)
+    )
+    init_state=cell.zero_state(batch,dtype=tf.float32)
+    output_rnn,final_states=tf.nn.dynamic_rnn(
+        cell,input_rnn,initial_state=init_state,dtype=tf.float32
+    )
+    output=tf.reshape(output_rnn,[-1,rnn_unit])
+    pred=tf.matmul(output,w2)+b2
+    return pred,final_states
+
 def train_lstm():
     global batch_size
+    
+    epoch_to_train=100
+
     with tf.variable_scope("sec_lstm"):
-        pred, _ = lstm(batch_size)
-    loss = tf.reduce_mean(tf.square(tf.reshape(pred, [-1]) - tf.reshape(Y, [-1])))
-    train_op = tf.train.AdamOptimizer(lr).minimize(loss)
-    saver = tf.train.Saver(tf.global_variables())
+        pred,_=lstm(batch_size)
+    loss=tf.reduce_mean(tf.square(
+        tf.reshape(pred,[-1])-tf.reshape(Y,[-1])
+    ))
+    train_opr=tf.train.AdamOptimizer(LearningRate).minimize(loss)
+    saver=tf.train.Saver()
     loss_list=[]
-    with tf.Session() as sess:
+    with tf.Session as sess:
         sess.run(tf.global_variables_initializer())
-        for i in range(100):  # We can increase the number of iterations to gain better result.
-            start = 0
-            end = start + batch_size
-            while (end < len(train_x)):
-                _, loss_ = sess.run([train_op, loss], feed_dict={X: train_x[start:end], Y: train_y[start:end]})
-                start += batch_size
-                end = end + batch_size
-            loss_list.append(loss_)
-            if i % 10 == 0:
-                print("Number of iterations:", i, " loss:", loss_list[-1])
-                if i > 0 and loss_list[-2] > loss_list[-1]:
-                    saver.save(sess, 'model_save1\\modle.ckpt')
-        # I run the code in windows 10,so use  'model_save1\\modle.ckpt'
-        # if you run it in Linux,please use  'model_save1/modle.ckpt'
-        print("The train has finished")
-train_lstm()
- 
-def prediction():
-    with tf.variable_scope("sec_lstm", reuse=tf.AUTO_REUSE):
-        pred, _ = lstm(1)
-    saver = tf.train.Saver(tf.global_variables())
-    with tf.Session() as sess:
-        saver.restore(sess, 'model_save1\\modle.ckpt')
-        # I run the code in windows 10,so use  'model_save1\\modle.ckpt'
-        # if you run it in Linux,please use  'model_save1/modle.ckpt'
-        predict = []
-        for i in range(0, np.shape(train_x)[0]):
-            next_seq = sess.run(pred, feed_dict={X: [train_x[i]]})
-            predict.append(next_seq[-1])
-        plt.figure()
-        plt.plot(list(range(len(data))),data, color='b')
-        plt.plot(list(range(time_step + 1, np.shape(train_x)[0] + 1 + time_step)), [ value*s+m for value in predict], color='r')
-        plt.show()
- 
-prediction()
+        for epoch in range(epoch_to_train):
+            for xb,yb in generate_batch(X_data,Y_data,sample_test,batch_size):
+                _,_loss=sess.run([train_opr,loss],feed_dict={
+                    X:xb,Y:yb
+                })
+            
+
+
